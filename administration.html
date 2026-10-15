@@ -6,7 +6,7 @@ async function load(kind){
 show({schools:"Écoles",students:"Élèves",classes:"Classes"}[kind],"Chargement depuis Firebase…");
 try{
 const docs=await getDocs(kind);
-show({schools:"Écoles",students:"Élèves",classes:"Classes"}[kind],docs.length?docs.map(x=>'<div class="entry"><strong>'+safe(x.name||x.id)+'</strong><p>'+safe(kind==="schools"?x.location||"":kind==="students"?"Classe : "+(x.classId||""):x.program||"")+'</p>'+button("Ouvrir la fiche",kind.slice(0,-1),x.id)+'</div>').join(""):"Aucun dossier enregistré.");
+show({schools:"Écoles",students:"Élèves",classes:"Classes"}[kind],docs.length?docs.map(x=>'<div class="entry"><strong>'+safe(x.name||x.id)+'</strong><p>'+safe(kind==="schools"?x.location||"":kind==="students"?"Classe : "+(x.classId||""):x.program||"")+'</p>'+button("Ouvrir la fiche",({schools:"school",students:"student",classes:"class"}[kind]),x.id)+'</div>').join(""):"Aucun dossier enregistré.");
 }catch(e){show("Accès indisponible","Impossible de consulter cette collection. Vérifie les autorisations Firebase.")}
 }
 async function openSchool(id){
