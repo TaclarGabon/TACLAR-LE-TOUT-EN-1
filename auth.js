@@ -30,6 +30,8 @@ const firebaseConfig = {
   auth.onAuthStateChanged(user=>{
     logoutButton.classList.toggle("hidden",!user);
     loginEntry.classList.toggle("hidden",!!user);
+    const nav=document.getElementById("adminEntry");
+    if(nav){nav.hidden=!user||user.uid!=="bX1ogVwQfHUy5Qy2r1toKF5z3Hl1";nav.classList.toggle("hidden",nav.hidden);nav.onclick=()=>window.location.href="./administration.html";}
     window.taclarAuthUser=user||null;
     if(!user&&(document.getElementById("planning")&&!document.getElementById("planning").classList.contains("hidden")||document.getElementById("transport")&&!document.getElementById("transport").classList.contains("hidden"))){go("login")}
     if(user&&window.taclarPendingPage){const destination=window.taclarPendingPage;window.taclarPendingPage=null;go(destination)}
