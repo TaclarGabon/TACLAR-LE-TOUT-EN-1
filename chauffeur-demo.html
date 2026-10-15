@@ -19,11 +19,11 @@ label{display:block;font-weight:700;font-size:14px}small{color:#627789}
 <section id="work" hidden><div class="card"><h2>Circuit test — Okala → La Sablière</h2><p class="sub">Quatre confirmations dans l'ordre. Un double clic ne valide pas deux fois le même événement.</p>
 <div id="steps"></div>
 <label for="clock">Heure simulée à Libreville <input id="clock" type="time"></label>
-<button id="confirm">Simuler la confirmation QR</button><button id="reset" class="secondary">Réinitialiser la démonstration</button>
+<button id="confirm">Simuler la confirmation QR</button><button id="reset" class="secondary">Réinitialiser la démonstration</button><button id="sendFirebase" type="button" class="secondary">Envoyer événement test à Firebase</button><p id="firebaseResult" role="status"></p>
 <p><small>Les confirmations sont conservées uniquement dans cet onglet jusqu'à la réinitialisation ou au rechargement de la page. Aucun enregistrement Firestore.</small></p></div></section>
 </main>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
 (function(){
 const config={apiKey:"AIzaSyDW8KoQvMIqpAhk3LU3mz-WRp-FWkeq0pM",authDomain:"taclar-le-tout-en-1.firebaseapp.com",projectId:"taclar-le-tout-en-1",appId:"1:1050439713834:web:1e52e255b47f961ec52f53",messagingSenderId:"1050439713834"};
@@ -36,6 +36,25 @@ function render(){
 document.getElementById("steps").innerHTML=labels.map((l,i)=>'<div class="step"><div><strong>'+(i+1)+'. '+l+'</strong></div><div class="'+(i<current?'done':'wait')+'">'+(i<current?'✓ '+times[i]:'En attente')+'</div></div>').join("");
 const b=document.getElementById("confirm");b.disabled=current>=4;b.textContent=current>=4?"Circuit simulé terminé":"Simuler : "+labels[current];
 }
+
+const db=firebase.firestore();
+function dateKey(){const a={};new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Libreville",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()).forEach(p=>{a[p.type]=p.value});return a.year+"-"+a.month+"-"+a.day}
+document.getElementById("sendFirebase").addEventListener("click",async()=>{
+ const user=firebase.auth().currentUser;
+ if(!user||user.uid!=="bX1ogVwQfHUy5Qy2r1toKF5z3Hl1")return;
+ const button=document.getElementById("sendFirebase"),notice=document.getElementById("firebaseResult");
+ button.disabled=true;notice.textContent="Envoi en cours…";
+ try{
+ const day=dateKey(),col=db.collection("transportDemoDays").doc("gulian-fity-"+day).collection("events");
+ const found=await col.get();
+ const used=new Set(found.docs.map(d=>d.id));
+ let step=0;while(step<4&&used.has("step-"+step))step++;
+ if(step===4){notice.textContent="Toutes les étapes de test sont déjà enregistrées pour aujourd’hui.";return;}
+ await col.doc("step-"+step).set({studentId:"gulian-fity",step:step,day:day,recordedAt:firebase.firestore.FieldValue.serverTimestamp()});
+ notice.textContent="Étape "+(step+1)+" envoyée à Firebase. Vérifie maintenant le compte parent.";
+ }catch(err){notice.textContent="Envoi impossible. Vérifie les règles Firestore et réessaie."}
+ finally{button.disabled=false;}
+});
 firebase.auth().onAuthStateChanged(user=>{
 if(user&&user.uid==="bX1ogVwQfHUy5Qy2r1toKF5z3Hl1"){access.hidden=true;work.hidden=false;clock.value=nowLibreville();render();}
 else{work.hidden=true;access.hidden=false;access.innerHTML='<h2>Connexion administrateur</h2><p>Connecte-toi ici, sans changer de page. Le compte parent de Christina ne donne pas accès à ce prototype chauffeur.</p><form id="driverLogin"><label>Adresse e-mail<input id="driverEmail" type="email" autocomplete="username" required></label><label>Mot de passe<input id="driverPassword" type="password" autocomplete="current-password" required></label><button type="submit">Se connecter</button></form><p id="driverError" role="status"></p><a href="./index.html">Retour à TACLAR</a>';document.getElementById("driverLogin").onsubmit=async e=>{e.preventDefault();const email=document.getElementById("driverEmail").value.trim(),password=document.getElementById("driverPassword").value;const notice=document.getElementById("driverError");notice.textContent="Connexion…";try{await firebase.auth().signInWithEmailAndPassword(email,password);document.getElementById("driverPassword")?.removeAttribute("value");}catch(err){notice.textContent="Connexion impossible. Vérifie les identifiants du compte administrateur."}};}
