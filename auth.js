@@ -50,6 +50,9 @@ const firebaseConfig = {
     logoutButton.classList.toggle("hidden",!user);
     loginEntry.classList.toggle("hidden",!!user);
     window.taclarAuthUser=user||null;
+    document.getElementById("rolePlanning").classList.toggle("hidden",!user||chosenRole==="student");
+    document.getElementById("roleTransport").classList.toggle("hidden",!user||chosenRole==="student");
+    document.getElementById("roleLogin").classList.toggle("hidden",!!user&&chosenRole!=="student");
     if(!user&&(document.getElementById("planning")&&!document.getElementById("planning").classList.contains("hidden")||document.getElementById("transport")&&!document.getElementById("transport").classList.contains("hidden"))){go("login")}
     if(user&&window.taclarPendingPage){const destination=window.taclarPendingPage;window.taclarPendingPage=null;if(chosenRole==="admin"&&user.uid===adminId){window.location.assign("./administration.html");return;}go(destination)}
   });
