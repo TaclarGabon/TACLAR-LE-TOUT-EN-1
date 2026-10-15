@@ -8,6 +8,10 @@
   let demoStep=0;
   let demoTimes=[null,null,null,null];
   const routeUrl="https://www.google.com/maps/dir/?api=1&origin=March%C3%A9%20Okala%2C%20Libreville%2C%20Gabon&destination=ELITE%20International%20School%20of%20Gabon%2C%20La%20Sabli%C3%A8re%2C%20Libreville%2C%20Gabon&travelmode=driving";
+  const courseDay=()=>{const w=new Intl.DateTimeFormat("fr-FR",{timeZone:"Africa/Libreville",weekday:"long"}).format(new Date());return w.charAt(0).toUpperCase()+w.slice(1)};
+  const minutes=t=>{const m=String(t||"").match(/^(\\d{1,2})[:h](\\d{2})$/);return m?Number(m[1])*60+Number(m[2]):null};
+  function courseBounds(){const courses=table&&table.days&&table.days[courseDay()];if(!Array.isArray(courses))return null;const valid=courses.filter(x=>!/(pause|repas)/i.test(x.subject||""));if(!valid.length)return null;return {start:valid[0].start,end:valid[valid.length-1].end}};
+  function punctuality(i){if(i!==1&&i!==2||!demoTimes[i])return "";const bounds=courseBounds();if(!bounds)return "Comparaison indisponible : pas de cours renseigné pour ce jour";const target=minutes(i===1?bounds.start:bounds.end);const observed=minutes(demoTimes[i]);if(target===null||observed===null)return "Horaires non comparables";const delta=observed-target;if(i===1)return delta<0?"Arrivée en avance de "+(-delta)+" min":delta===0?"Arrivée à l’heure":"Arrivée en retard de "+delta+" min";const late=delta-30;return late<=0?"Récupération à l’heure":"Récupération en retard de "+late+" min";}
   const stages=[
     ["Matin","Montée dans le bus","🚌","Okala — derrière le marché"],
     ["Matin","Arrivée à l’école","🏫","Elite International — La Sablière"],
@@ -26,13 +30,13 @@
       '<p style="background:#fff1b5;padding:12px;border-radius:10px;font-weight:700">MODE DÉMONSTRATION — aucun trajet ni position GPS réelle.</p>'+
       '<p><strong>Statut :</strong> '+txt(status)+'</p>'+
       '<div style="border:1px solid #d9e2e8;border-radius:14px;padding:15px;margin:12px 0;background:#f4f8fb"><strong>🗺️ Circuit de référence validé</strong><p style="margin:8px 0">Okala (point de prise en charge) → Elite International, La Sablière</p><p style="margin:8px 0;font-size:13px;color:#536476">Trajet témoin validé sur ta capture : 2,1 km · 5 min. Le lien utilise le marché d’Okala comme repère public, pas le point GPS privé ; le parcours peut donc différer.</p><a href="'+routeUrl+'" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;padding:12px;background:#deedff;border-radius:9px;font-weight:700;color:#184e8a">Ouvrir Google Maps (repère public Okala) ↗</a></div>'+
-      '<h3>Trajet du matin</h3>'+stages.slice(0,2).map((s,i)=>demoRow(s,i)).join("")+
+      '<p style="font-size:13px;color:#526277">'+(courseBounds()?'Cours du '+txt(courseDay())+' : début '+txt(courseBounds().start)+' · fin '+txt(courseBounds().end)+' · récupération jusqu’à '+txt((()=>{let n=minutes(courseBounds().end)+30;return String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0")})()):'Horaire de cours indisponible pour ce jour')+'</p><h3>Trajet du matin</h3>'+stages.slice(0,2).map((s,i)=>demoRow(s,i)).join("")+
       '<h3>Trajet du retour</h3>'+stages.slice(2).map((s,i)=>demoRow(s,i+2)).join("")+
-      '<button id="nextDemo" class="action">'+(demoStep===4?'Recommencer la simulation':'Confirmer l’étape suivante (démo)')+'</button>'+
+      '<label style="display:block;margin:12px 0;font-size:14px;font-weight:600">Heure à simuler (Libreville) <input id="demoClock" type="time" style="display:block;width:100%;padding:12px;border-radius:10px;border:1px solid #d3dce3;font-size:16px" value="'+new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Libreville",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date())+'"></label><button id="nextDemo" class="action">'+(demoStep===4?'Recommencer la simulation':'Confirmer l’étape suivante (démo)')+'</button>'+
       '<p style="font-size:13px;color:#64748b">Chaque clic enregistre l’heure de démonstration au fuseau de Libreville uniquement sur cet écran. Les heures réelles seront transmises par le personnel autorisé et stockées en sécurité. Le bus ne peut pas être localisé avec ces seules confirmations.</p>';
     document.getElementById("nextDemo").onclick=()=>{
       if(demoStep===4){demoStep=0;demoTimes=[null,null,null,null]}
-      else {demoTimes[demoStep]=new Intl.DateTimeFormat("fr-FR",{timeZone:"Africa/Libreville",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date());demoStep++}
+      else {demoTimes[demoStep]=document.getElementById("demoClock").value;demoStep++}
       showTransportSimulation();
     };
   }
