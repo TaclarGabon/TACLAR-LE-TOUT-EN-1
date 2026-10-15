@@ -9,7 +9,7 @@
   let demoTimes=[null,null,null,null];
   const routeUrl="https://www.google.com/maps/dir/?api=1&origin=March%C3%A9%20Okala%2C%20Libreville%2C%20Gabon&destination=ELITE%20International%20School%20of%20Gabon%2C%20La%20Sabli%C3%A8re%2C%20Libreville%2C%20Gabon&travelmode=driving";
   const courseDay=()=>{const w=new Intl.DateTimeFormat("fr-FR",{timeZone:"Africa/Libreville",weekday:"long"}).format(new Date());return w.charAt(0).toUpperCase()+w.slice(1)};
-  const minutes=t=>{const m=String(t||"").match(/^(\\d{1,2})[:h](\\d{2})$/);return m?Number(m[1])*60+Number(m[2]):null};
+  const minutes=t=>{const p=String(t||"").replace("h",":").split(":");return p.length===2 && p.every(x=>x!=="" && Number.isFinite(Number(x)))?Number(p[0])*60+Number(p[1]):null};
   function courseBounds(){const courses=table&&table.days&&table.days[courseDay()];if(!Array.isArray(courses))return null;const valid=courses.filter(x=>!/(pause|repas)/i.test(x.subject||""));if(!valid.length)return null;return {start:valid[0].start,end:valid[valid.length-1].end}};
   function punctuality(i){if(i!==1&&i!==2||!demoTimes[i])return "";const bounds=courseBounds();if(!bounds)return "Comparaison indisponible : pas de cours renseigné pour ce jour";const target=minutes(i===1?bounds.start:bounds.end);const observed=minutes(demoTimes[i]);if(target===null||observed===null)return "Horaires non comparables";const delta=observed-target;if(i===1)return delta<0?"Arrivée en avance de "+(-delta)+" min":delta===0?"Arrivée à l’heure":"Arrivée en retard de "+delta+" min";const late=delta-30;return late<=0?"Récupération à l’heure":"Récupération en retard de "+late+" min";}
   const stages=[
