@@ -6,7 +6,7 @@ const S={kid:0,klass:"5e A",week:false,day:"Lundi"};
 const $=id=>document.getElementById(id);
 const weekdays=["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
 function todayLibreville(){const d=new Intl.DateTimeFormat("fr-FR",{weekday:"long",timeZone:"Africa/Libreville"}).format(new Date());return d.charAt(0).toUpperCase()+d.slice(1)}
-function go(page){document.querySelectorAll(".page").forEach(el=>el.classList.toggle("hidden",el.id!==page));window.scrollTo(0,0)}
+function go(page){if(page!=="welcome"&&page!=="login"&&!window.taclarAuthUser){window.taclarPendingPage=page;page="login"}document.querySelectorAll(".page").forEach(el=>el.classList.toggle("hidden",el.id!==page));window.scrollTo(0,0)}
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
 function sel(id,values,chosen){$(id).innerHTML=values.map((v,i)=>'<option value="'+i+'" '+(v===chosen?"selected":"")+'>'+v+'</option>').join("")}
 function init(){sel("pc",pupils.map(x=>x.name),pupils[0].name);sel("tc",pupils.map(x=>x.name),pupils[0].name);updateSelectors();
