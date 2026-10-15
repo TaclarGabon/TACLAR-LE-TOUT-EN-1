@@ -5,6 +5,8 @@
   const txt=v=>String(v??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
   let record=null,table=null,weekly=false;
   function transportView(personal,message){transport.classList.toggle("hidden",!personal);transportDemo.classList.toggle("hidden",personal);if(personal){transport.textContent=message||"Transport : aucune affectation enregistrée pour cet élève. Les horaires et événements de montée/descente seront affichés après enregistrement par l’administration.";}}
+  let liveEvents=[],unsubscribeLive=null;
+  function liveCard(){const names=["Montée à Okala","Arrivée à l’école","Récupération à l’école","Dépose à Okala"];return '<div style="background:#eef7f1;border-radius:12px;padding:14px;margin:12px 0"><strong>Confirmations Firebase — test</strong><p style="font-size:12px">Mises à jour automatiques, distinctes de la simulation locale.</p>'+(liveEvents.length?liveEvents.map(e=>'<p>✅ '+txt(names[e.step]||"Étape")+': '+txt(e.time||"heure en attente")+'</p>').join(""):'<p>Aucune confirmation Firebase aujourd’hui.</p>')+'</div>'}
   let demoStep=0;
   let demoTimes=[null,null,null,null];
   const routeUrl="https://www.google.com/maps/dir/?api=1&origin=March%C3%A9%20Okala%2C%20Libreville%2C%20Gabon&destination=ELITE%20International%20School%20of%20Gabon%2C%20La%20Sabli%C3%A8re%2C%20Libreville%2C%20Gabon&travelmode=driving";
@@ -31,7 +33,7 @@
       '<p><strong>Statut :</strong> '+txt(status)+'</p>'+
       '<div style="border:1px solid #d9e2e8;border-radius:14px;padding:15px;margin:12px 0;background:#f4f8fb"><strong>🗺️ Circuit de référence validé</strong><p style="margin:8px 0">Okala (point de prise en charge) → Elite International, La Sablière</p><p style="margin:8px 0;font-size:13px;color:#536476">Trajet témoin validé sur ta capture : 2,1 km · 5 min. Le lien utilise le marché d’Okala comme repère public, pas le point GPS privé ; le parcours peut donc différer.</p><a href="'+routeUrl+'" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;padding:12px;background:#deedff;border-radius:9px;font-weight:700;color:#184e8a">Ouvrir Google Maps (repère public Okala) ↗</a></div>'+
       '<p style="font-size:13px;color:#526277">'+(courseBounds()?'Cours du '+txt(courseDay())+' : début '+txt(courseBounds().start)+' · fin '+txt(courseBounds().end)+' · récupération jusqu’à '+txt((()=>{let n=minutes(courseBounds().end)+30;return String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0")})()):'Horaire de cours indisponible pour ce jour')+'</p><h3>Trajet du matin</h3>'+stages.slice(0,2).map((s,i)=>demoRow(s,i)).join("")+
-      '<h3>Trajet du retour</h3>'+stages.slice(2).map((s,i)=>demoRow(s,i+2)).join("")+
+      liveCard()+'<h3>Trajet du retour</h3>'+stages.slice(2).map((s,i)=>demoRow(s,i+2)).join("")+
       '<label style="display:block;margin:12px 0;font-size:14px;font-weight:600">Heure à simuler (Libreville) <input id="demoClock" type="time" style="display:block;width:100%;padding:12px;border-radius:10px;border:1px solid #d3dce3;font-size:16px" value="'+new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Libreville",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date())+'"></label><button id="nextDemo" class="action">'+(demoStep===4?'Recommencer la simulation':'Confirmer l’étape suivante (démo)')+'</button>'+
       '<p style="font-size:13px;color:#64748b">Chaque clic enregistre l’heure de démonstration au fuseau de Libreville uniquement sur cet écran. Les heures réelles seront transmises par le personnel autorisé et stockées en sécurité. Le bus ne peut pas être localisé avec ces seules confirmations.</p>';
     document.getElementById("nextDemo").onclick=()=>{
@@ -50,6 +52,7 @@
   }
   function setPage(personal,msg){root.classList.toggle("hidden",!personal);demo.classList.toggle("hidden",personal);if(personal&&msg)root.textContent=msg;}
   async function refresh(user){
+    if(unsubscribeLive){unsubscribeLive();unsubscribeLive=null}liveEvents=[];
     record=null;table=null;weekly=false;
     if(!user){setPage(false);transportView(false);return}
     if(typeof firebase==="undefined"||!firebase.firestore)return;
@@ -63,6 +66,9 @@
       const eligible=students.docs.find(d=>d.data().classId==="elite-6e-peii");
       if(!eligible){setPage(true,"Aucun planning Elite International n’est associé à ce compte.");return}
       record=eligible.data();showTransportSimulation();
+      const dayParts={};new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Libreville",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()).forEach(x=>dayParts[x.type]=x.value);
+      const dayId="gulian-fity-"+dayParts.year+"-"+dayParts.month+"-"+dayParts.day;
+      unsubscribeLive=db.collection("transportDemoDays").doc(dayId).collection("events").onSnapshot(snapshot=>{liveEvents=snapshot.docs.map(d=>{const x=d.data(),t=x.recordedAt&&x.recordedAt.toDate?x.recordedAt.toDate():null;return {step:x.step,time:t?new Intl.DateTimeFormat("fr-FR",{timeZone:"Africa/Libreville",hour:"2-digit",minute:"2-digit",hour12:false}).format(t):"en attente"}}).sort((a,b)=>a.step-b.step);showTransportSimulation()},error=>{liveEvents=[];showTransportSimulation()});
       try{
         const doc=await db.collection("timetables").doc("elite-6e-peii-2026-2027").get();
         if(doc.exists)table=doc.data();
