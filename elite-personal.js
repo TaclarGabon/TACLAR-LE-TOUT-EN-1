@@ -20,7 +20,7 @@
   ];
   function demoRow(s,i){
     const done=i<demoStep;
-    return '<div class="lesson" style="align-items:center"><div><strong>'+s[2]+' '+s[1]+'</strong><p>'+txt(s[3])+'</p></div><div style="text-align:right;flex-shrink:0;font-size:13px;font-weight:700;color:'+(done?'#28764f':'#687987')+'">'+(done?'✓ Démo':'En attente')+(done?'<div style="margin-top:5px;font-size:15px">'+txt(demoTimes[i])+'</div>':'')+'</div></div>';
+    return '<div class="lesson" style="align-items:center"><div><strong>'+s[2]+' '+s[1]+'</strong><p>'+txt(s[3])+'</p></div><div style="text-align:right;flex-shrink:0;font-size:13px;font-weight:700;color:'+(done?'#28764f':'#687987')+'">'+(done?'✓ Démo':'En attente')+(done?'<div style="margin-top:5px;font-size:15px">'+txt(demoTimes[i])+'</div>':'')+'</div></div>'+((done&&(i===1||i===2))?'<p style="font-size:13px;font-weight:700;color:#28764f">'+txt(punctuality(i))+'</p>':'');
   }
   function showTransportSimulation(){
     if(!record)return;
@@ -67,7 +67,7 @@
         const doc=await db.collection("timetables").doc("elite-6e-peii-2026-2027").get();
         if(doc.exists)table=doc.data();
       }catch(error){table=null}
-      render();
+      render();showTransportSimulation();
     }catch(error){setPage(true,"Impossible de charger ce dossier. Vérifie les autorisations Firestore.");}
   }
   firebase.auth().onAuthStateChanged(refresh);
