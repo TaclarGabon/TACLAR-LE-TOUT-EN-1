@@ -1,9 +1,10 @@
 /* Personal planning: Firebase-authenticated, Firestore-backed. */
 (function(){
-  const root=document.getElementById("elitePersonal"),demo=document.getElementById("planningDemo");
+  const root=document.getElementById("elitePersonal"),demo=document.getElementById("planningDemo"),transport=document.getElementById("eliteTransport"),transportDemo=document.getElementById("transportDemo");
   const weekdays=["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
   const txt=v=>String(v??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
   let record=null,table=null,weekly=false;
+  function transportView(personal,message){transport.classList.toggle("hidden",!personal);transportDemo.classList.toggle("hidden",personal);if(personal){transport.textContent=message||"Transport : aucune affectation enregistrée pour cet élève. Les horaires et événements de montée/descente seront affichés après enregistrement par l’administration.";}}
   function render(){
     if(!record)return;
     const items=table&&table.days||{},now=new Intl.DateTimeFormat("fr-FR",{weekday:"long",timeZone:"Africa/Libreville"}).format(new Date()),today=now.charAt(0).toUpperCase()+now.slice(1);
@@ -15,18 +16,18 @@
   function setPage(personal,msg){root.classList.toggle("hidden",!personal);demo.classList.toggle("hidden",personal);if(personal&&msg)root.textContent=msg;}
   async function refresh(user){
     record=null;table=null;weekly=false;
-    if(!user){setPage(false);return}
+    if(!user){setPage(false);transportView(false);return}
     if(typeof firebase==="undefined"||!firebase.firestore)return;
     const db=firebase.firestore();
     try{
       const parent=await db.collection("parents").doc(user.uid).get();
-      if(!parent.exists){setPage(false);return}
-      setPage(true,"Chargement de l’emploi du temps personnel…");
+      if(!parent.exists){setPage(false);transportView(false);return}
+      setPage(true,"Chargement de l’emploi du temps personnel…");transportView(true,"Recherche de l’affectation transport…");
       const students=await db.collection("students").where("parentUid","==",user.uid).limit(10).get();
       if(students.empty){setPage(true,"Aucun élève n’est encore associé à ce compte.");return}
       const eligible=students.docs.find(d=>d.data().classId==="elite-6e-peii");
       if(!eligible){setPage(true,"Aucun planning Elite International n’est associé à ce compte.");return}
-      record=eligible.data();
+      record=eligible.data();transportView(true,"Gulian Fity — Elite International. Aucun circuit ou trajet de transport n’est encore attribué dans TACLAR. Aucun horaire fictif n’est affiché.");
       try{
         const doc=await db.collection("timetables").doc("elite-6e-peii-2026-2027").get();
         if(doc.exists)table=doc.data();
