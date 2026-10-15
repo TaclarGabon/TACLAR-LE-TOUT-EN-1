@@ -27,9 +27,11 @@
     ["Retour","Montée dans le bus","🚌","Elite International — La Sablière"],
     ["Retour","Arrivée au point de dépose","📍","Okala — derrière le marché"]
   ];
-  function demoRow(s,i){
-    const done=i<demoStep;
-    return '<div class="lesson" style="align-items:center"><div><strong>'+s[2]+' '+s[1]+'</strong><p>'+txt(s[3])+'</p></div><div style="text-align:right;flex-shrink:0;font-size:13px;font-weight:700;color:'+(done?'#28764f':'#687987')+'">'+(done?'✓ Démo':'En attente')+(done?'<div style="margin-top:5px;font-size:15px">'+txt(demoTimes[i])+'</div>':'')+'</div></div>'+((done&&(i===1||i===2))?'<p style="font-size:13px;font-weight:700;color:#28764f">'+txt(punctuality(i))+'</p>':'');
+  function demoRow(stage,i){
+    const e=liveEvents.find(x=>x.step===i),done=!!e,local=i<demoStep;
+    const time=e?e.time:(local?demoTimes[i]:null);
+    const comparison=done&&(i===1||i===2)?punctuality(i,e.time):"";
+    return '<div class="lesson" style="align-items:center"><div><strong>'+stage[2]+' '+stage[1]+'</strong><p>'+txt(stage[3])+'</p>'+(comparison?'<p style="color:#28764f;font-size:13px;font-weight:700">'+txt(comparison)+' (test)</p>':'')+'</div><div style="text-align:right;flex-shrink:0;font-size:13px;font-weight:700;color:'+(done?'#28764f':'#687987')+'">'+(done?'✓ Confirmé (test)':local?'✓ Simulation locale':'En attente')+(time?'<div style="margin-top:5px;font-size:15px">'+txt(time)+'</div>':'')+'</div></div>';
   }
   function showTransportSimulation(){
     if(!record)return;
@@ -40,9 +42,9 @@
       '<p><strong>Statut :</strong> '+txt(status)+'</p>'+
       '<div style="border:1px solid #d9e2e8;border-radius:14px;padding:15px;margin:12px 0;background:#f4f8fb"><strong>🗺️ Circuit de référence validé</strong><p style="margin:8px 0">Okala (point de prise en charge) → Elite International, La Sablière</p><p style="margin:8px 0;font-size:13px;color:#536476">Trajet témoin validé sur ta capture : 2,1 km · 5 min. Le lien utilise le marché d’Okala comme repère public, pas le point GPS privé ; le parcours peut donc différer.</p><a href="'+routeUrl+'" target="_blank" rel="noopener noreferrer" style="display:block;text-align:center;padding:12px;background:#deedff;border-radius:9px;font-weight:700;color:#184e8a">Ouvrir Google Maps (repère public Okala) ↗</a></div>'+
       '<p style="font-size:13px;color:#526277">'+(courseBounds()?'Cours du '+txt(courseDay())+' : début '+txt(courseBounds().start)+' · fin '+txt(courseBounds().end)+' · récupération jusqu’à '+txt((()=>{let n=minutes(courseBounds().end)+30;return String(Math.floor(n/60)).padStart(2,"0")+":"+String(n%60).padStart(2,"0")})()):'Horaire de cours indisponible pour ce jour')+'</p><h3>Trajet du matin</h3>'+stages.slice(0,2).map((s,i)=>demoRow(s,i)).join("")+
-      liveCard()+'<h3>Trajet du retour</h3>'+stages.slice(2).map((s,i)=>demoRow(s,i+2)).join("")+
-      '<label style="display:block;margin:12px 0;font-size:14px;font-weight:600">Heure à simuler (Libreville) <input id="demoClock" type="time" style="display:block;width:100%;padding:12px;border-radius:10px;border:1px solid #d3dce3;font-size:16px" value="'+new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Libreville",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date())+'"></label><button id="nextDemo" class="action">'+(demoStep===4?'Recommencer la simulation':'Confirmer l’étape suivante (démo)')+'</button>'+
-      '<p style="font-size:13px;color:#64748b">Chaque clic enregistre l’heure de démonstration au fuseau de Libreville uniquement sur cet écran. Les heures réelles seront transmises par le personnel autorisé et stockées en sécurité. Le bus ne peut pas être localisé avec ces seules confirmations.</p>';
+      '<h3>Trajet du retour</h3>'+stages.slice(2).map((s,i)=>demoRow(s,i+2)).join("")+
+      '<details style="margin-top:15px"><summary style="font-weight:700;cursor:pointer">Simulation locale (facultatif)</summary><label style="display:block;margin:12px 0;font-size:14px;font-weight:600">Heure à simuler (Libreville) <input id="demoClock" type="time" style="display:block;width:100%;padding:12px;border-radius:10px;border:1px solid #d3dce3;font-size:16px" value="'+new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Libreville",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date())+'"></label><button id="nextDemo" class="action">'+(demoStep===4?'Recommencer la simulation':'Confirmer l’étape suivante (démo)')+'</button>'+
+      '<p style="font-size:13px;color:#64748b">Chaque clic enregistre l’heure de démonstration au fuseau de Libreville uniquement sur cet écran. Les heures réelles seront transmises par le personnel autorisé et stockées en sécurité. Le bus ne peut pas être localisé avec ces seules confirmations.</p></details>';
     document.getElementById("nextDemo").onclick=()=>{
       if(demoStep===4){demoStep=0;demoTimes=[null,null,null,null]}
       else {demoTimes[demoStep]=document.getElementById("demoClock").value;demoStep++}
