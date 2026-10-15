@@ -12,7 +12,24 @@ const firebaseConfig = {
   if(typeof firebase==="undefined"){status.textContent="Connexion indisponible : impossible de charger Firebase.";return}
   try{firebase.initializeApp(firebaseConfig)}catch(err){status.textContent="Erreur d'initialisation Firebase.";return}
   const auth=firebase.auth();
+  const logoutButton=document.getElementById("logoutButton");
+  const loginEntry=document.getElementById("loginEntry");
+  logoutButton.addEventListener("click",async()=>{
+    logoutButton.disabled=true;
+    try {
+      await auth.signOut();
+      window.taclarPendingPage=null;
+      document.getElementById("authPassword").value="";
+      status.textContent="";
+      go("welcome");
+    } catch(error) {
+      status.textContent="Déconnexion impossible. Réessaie.";
+      go("login");
+    } finally { logoutButton.disabled=false; }
+  });
   auth.onAuthStateChanged(user=>{
+    logoutButton.classList.toggle("hidden",!user);
+    loginEntry.classList.toggle("hidden",!!user);
     window.taclarAuthUser=user||null;
     if(!user&&(document.getElementById("planning")&&!document.getElementById("planning").classList.contains("hidden")||document.getElementById("transport")&&!document.getElementById("transport").classList.contains("hidden"))){go("login")}
     if(user&&window.taclarPendingPage){const destination=window.taclarPendingPage;window.taclarPendingPage=null;go(destination)}
