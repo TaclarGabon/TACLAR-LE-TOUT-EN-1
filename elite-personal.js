@@ -30,13 +30,14 @@
   function demoRow(stage,i){
     const e=liveEvents.find(x=>x.step===i),done=!!e,local=i<demoStep;
     const time=e?e.time:(local?demoTimes[i]:null);
-    const comparison=done&&(i===1||i===2)?punctuality(i,e.time):"";
-    return '<div class="lesson" style="align-items:center"><div><strong>'+stage[2]+' '+stage[1]+'</strong><p>'+txt(stage[3])+'</p>'+(comparison?'<p style="color:#28764f;font-size:13px;font-weight:700">'+txt(comparison)+' (test)</p>':'')+'</div><div style="text-align:right;flex-shrink:0;font-size:13px;font-weight:700;color:'+(done?'#28764f':'#687987')+'">'+(done?'✓ Confirmé (test)':local?'✓ Simulation locale':'En attente')+(time?'<div style="margin-top:5px;font-size:15px">'+txt(time)+'</div>':'')+'</div></div>';
+    const comparison=(i===1||i===2)&&time?punctuality(i,time):"";
+    return '<div class="lesson" style="align-items:center"><div><strong>'+stage[2]+' '+stage[1]+'</strong><p>'+txt(stage[3])+'</p>'+(comparison?'<p style="color:#28764f;font-size:13px;font-weight:700">'+txt(comparison)+(done?' (test Firebase)':' (simulation locale)')+'</p>':'')+'</div><div style="text-align:right;flex-shrink:0;font-size:13px;font-weight:700;color:'+(done?'#28764f':'#687987')+'">'+(done?'✓ Confirmé (test)':local?'✓ Simulation locale':'En attente')+(time?'<div style="margin-top:5px;font-size:15px">'+txt(time)+'</div>':'')+'</div></div>';
   }
   function showTransportSimulation(){
     if(!record)return;
     transport.classList.remove("hidden");transportDemo.classList.add("hidden");
     const status=demoStep===0?'En attente de montée':demoStep===1?'Trajet du matin en cours (simulation)':demoStep===2?'Arrivée à l’école confirmée (démo)':demoStep===3?'Trajet retour en cours (simulation)':'Retour terminé (simulation)';
+    const accordionWasOpen=!!transport.querySelector("details[open]");
     transport.innerHTML='<h2>Transport de mon enfant</h2><p><strong>'+txt(record.name)+'</strong> · Elite International · 6e PEII</p>'+
       '<p style="background:#fff1b5;padding:12px;border-radius:10px;font-weight:700">MODE DÉMONSTRATION — aucun trajet ni position GPS réelle.</p>'+
       '<p><strong>Statut :</strong> '+txt(status)+'</p>'+
@@ -45,6 +46,7 @@
       '<h3>Trajet du retour</h3>'+stages.slice(2).map((s,i)=>demoRow(s,i+2)).join("")+
       '<details style="margin-top:15px"><summary style="font-weight:700;cursor:pointer">Simulation locale (facultatif)</summary><label style="display:block;margin:12px 0;font-size:14px;font-weight:600">Heure à simuler (Libreville) <input id="demoClock" type="time" style="display:block;width:100%;padding:12px;border-radius:10px;border:1px solid #d3dce3;font-size:16px" value="'+new Intl.DateTimeFormat("en-GB",{timeZone:"Africa/Libreville",hour:"2-digit",minute:"2-digit",hour12:false}).format(new Date())+'"></label><button id="nextDemo" class="action">'+(demoStep===4?'Recommencer la simulation':'Confirmer l’étape suivante (démo)')+'</button>'+
       '<p style="font-size:13px;color:#64748b">Chaque clic enregistre l’heure de démonstration au fuseau de Libreville uniquement sur cet écran. Les heures réelles seront transmises par le personnel autorisé et stockées en sécurité. Le bus ne peut pas être localisé avec ces seules confirmations.</p></details>';
+    if(accordionWasOpen)transport.querySelector("details").open=true;
     document.getElementById("nextDemo").onclick=()=>{
       if(demoStep===4){demoStep=0;demoTimes=[null,null,null,null]}
       else {demoTimes[demoStep]=document.getElementById("demoClock").value;demoStep++}
