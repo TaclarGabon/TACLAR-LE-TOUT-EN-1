@@ -1,43 +1,75 @@
-// TACLAR — bloc à INTÉGRER dans les règles Firestore existantes,
-// À placer dans match /databases/{database}/documents.
-// Ne remplace jamais les autres règles déjà publiées.
-// Ce bloc suppose que les parents ont créé un compte Firebase Auth.
-// Un formulaire ouvert sans authentification ne pourra pas écrire.
+// TACLAR — REGLES INSCRIPTIONS : BLOC ADDITIF POUR TEST CONTROLE
+// Coller DANS match /databases/{database}/documents,
+// avant match /{document=**}. Conserver toutes les règles existantes.
+// Nécessite le function isAdmin() déjà défini dans les règles TACLAR.
+// IMPORTANT : ne pas publier avant mise à jour du parcours de compte
+// et test avec un compte de démonstration distinct.
+
 match /registrationRequests/{requestId} {
-  function isAdmin() {
-    return request.auth != null && request.auth.uid == "bX1ogVwQfHUy5Qy2r1toKF5z3Hl1";
+  function isVerifiedOwner() {
+    return request.auth != null
+      && request.auth.token.email_verified == true
+      && request.auth.uid == requestId;
   }
-  function isOwner() {
-    return request.auth != null && request.resource.data.ownerUid == request.auth.uid;
-  }
-  allow create: if isOwner()
+
+  // Un dossier maximum par compte Firebase Auth (UID document).
+  // Une nouvelle tentative ne crée donc pas de doublon du même compte.
+  allow create: if isVerifiedOwner()
     && request.resource.data.keys().hasOnly([
-      "ownerUid", "parentName", "email", "phone", "childName", "age",
-      "schoolId", "classId", "otherClass", "transportRequested",
-      "pickupArea", "status", "createdAt"
+      "ownerUid", "parentName", "email", "phone",
+      "childName", "age", "schoolId", "classId",
+      "otherClass", "transportRequested", "pickupArea",
+      "status", "createdAt"
     ])
+    && request.resource.data.ownerUid == request.auth.uid
+    && request.resource.data.email == request.auth.token.email
     && request.resource.data.status == "pending"
+    && request.resource.data.createdAt == request.time
     && request.resource.data.parentName is string
+    && request.resource.data.parentName.size() > 1
     && request.resource.data.parentName.size() <= 100
     && request.resource.data.childName is string
+    && request.resource.data.childName.size() > 1
     && request.resource.data.childName.size() <= 100
-    && request.resource.data.email is string
-    && request.resource.data.email.size() <= 180
     && request.resource.data.phone is string
+    && request.resource.data.phone.size() >= 8
     && request.resource.data.phone.size() <= 30
     && request.resource.data.age is string
-    && request.resource.data.schoolId is string
-    && request.resource.data.schoolId in ["elite-international", "college-capitaine-ntchorere"]
+    && request.resource.data.age.size() <= 3
+    && request.resource.data.schoolId in [
+      "elite-international",
+      "college-capitaine-ntchorere"
+    ]
     && request.resource.data.classId is string
+    && request.resource.data.classId.size() <= 80
     && request.resource.data.otherClass is string
     && request.resource.data.otherClass.size() <= 60
     && request.resource.data.transportRequested is bool
     && request.resource.data.pickupArea is string
-    && request.resource.data.pickupArea.size() <= 130
-    && request.resource.data.createdAt == request.time;
-  allow get, list: if isAdmin();
-  allow update, delete: if false;
+    && request.resource.data.pickupArea.size() <= 130;
+
+  // Parent : voir uniquement SON statut. Admin : consulter tout.
+  allow get: if isAdmin() || (
+    request.auth != null && request.auth.uid == requestId
+  );
+  allow list: if isAdmin();
+
+  // Admin peut modifier le statut uniquement, sans altérer les
+  // champs d'identité. La création d'accès scolaires reste distincte.
+  allow update: if isAdmin()
+    && request.resource.data.diff(resource.data).affectedKeys()
+      .hasOnly(["status", "reviewedAt"])
+    && request.resource.data.status in [
+      "pending", "correction_requested", "approved",
+      "rejected", "archived"
+    ]
+    && request.resource.data.reviewedAt == request.time;
+
+  // Suppression désactivée à ce stade : un processus maîtrisé de
+  // clôture/effacement sera ajouté avec contrôle de rattachement.
+  allow delete: if false;
 }
-// TODO avant déploiement : vérifier l'identité/ownership du parent, limiter
-// le nombre de demandes par compte côté serveur, anti-abus et validation
-// effective école/classe côté serveur. Ne pas activer en production en l'état.
+// Limites : ne vérifie pas le lien familial, l'école/classe dans
+// leur collection, ni les abus inter-comptes. Ne pas confondre
+// APPROBATION du dossier avec création d'un accès élève.
+// Nécessite tests via Firebase Rules Playground ou émulateur.
