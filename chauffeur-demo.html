@@ -14,10 +14,10 @@ button:disabled{background:#a4b5c0}button.secondary{background:#e4edf4;color:#25
 input{padding:11px;width:100%;border:1px solid #ccd8e0;border-radius:9px;font-size:17px}
 label{display:block;font-weight:700;font-size:14px}small{color:#627789}
 </style></head><body><header>TACLAR · Espace Chauffeur — prototype</header><main>
-<div class="card"><h1>Transport scolaire</h1><p class="sub">Élève test : Gulian Fity · Elite International · 6e PEII</p><div class="notice">DÉMONSTRATION : aucun véritable QR code scanné et aucune notification envoyée aux parents.</div></div>
+<div class="card"><h1>Transport scolaire</h1><p class="sub">Élève test : Gulian Fity · Elite International · 6e PEII</p><div class="notice">DÉMONSTRATION : le badge ouvre cette page. La confirmation Firebase est visible dans le compte parent, sans notification push ni GPS réel.</div></div>
 <div id="access" class="card">Vérification du compte administrateur…</div>
 <section id="work" hidden><div class="card"><h2>Circuit test — Okala → La Sablière</h2><p class="sub">Quatre confirmations dans l'ordre. Un double clic ne valide pas deux fois le même événement.</p>
-<div id="steps"></div>
+<div id="steps"></div><div id="badgeConfirmArea" hidden><p class="notice">Badge de Gulian Fity reconnu — démonstration. Vérifie son identité avant de confirmer.</p><button id="badgeConfirm" type="button">Confirmer la montée de Gulian</button><p id="badgeMessage" role="status"></p></div>
 <label for="clock">Heure simulée à Libreville <input id="clock" type="time"></label>
 <button id="confirm">Simuler la confirmation QR</button><button id="reset" class="secondary">Réinitialiser la démonstration</button><button id="sendFirebase" type="button" class="secondary">Envoyer événement test à Firebase</button><p id="firebaseResult" role="status"></p>
 <p><small>Les confirmations sont conservées uniquement dans cet onglet jusqu'à la réinitialisation ou au rechargement de la page. Aucun enregistrement Firestore.</small></p></div></section>
@@ -38,6 +38,17 @@ const b=document.getElementById("confirm");b.disabled=current>=4;b.textContent=c
 }
 
 const db=firebase.firestore();
+const badgeMode=new URLSearchParams(location.search).get("badge")==="gulian-demo";
+if(badgeMode){document.getElementById("badgeConfirmArea").hidden=false;document.getElementById("confirm").hidden=true;document.getElementById("reset").hidden=true;document.getElementById("sendFirebase").hidden=true;document.getElementById("clock").parentElement.hidden=true;}
+document.getElementById("badgeConfirm").onclick=async()=>{
+ const user=firebase.auth().currentUser,btn=document.getElementById("badgeConfirm"),note=document.getElementById("badgeMessage");
+ if(!user||user.uid!=="bX1ogVwQfHUy5Qy2r1toKF5z3Hl1"){note.textContent="Accès refusé : personnel autorisé uniquement.";return;}
+ btn.disabled=true;note.textContent="Vérification de la montée…";
+ try{const day=dateKey(),doc=db.collection("transportDemoDays").doc("gulian-fity-"+day).collection("events").doc("step-0");
+ await db.runTransaction(async tx=>{const existing=await tx.get(doc);if(existing.exists)throw new Error("Montée déjà confirmée aujourd’hui. Aucun doublon créé.");tx.set(doc,{studentId:"gulian-fity",step:0,day:day,recordedAt:firebase.firestore.FieldValue.serverTimestamp()});});
+ note.textContent="✅ Montée confirmée dans Firebase. Christina peut la voir dans Mon transport (test).";
+ }catch(err){note.textContent=err.message&&err.message.includes("déjà")?err.message:"Confirmation impossible. Vérifie l’accès Firebase.";}finally{btn.disabled=false;}
+};
 function dateKey(){const a={};new Intl.DateTimeFormat("en-CA",{timeZone:"Africa/Libreville",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()).forEach(p=>{a[p.type]=p.value});return a.year+"-"+a.month+"-"+a.day}
 document.getElementById("sendFirebase").addEventListener("click",async()=>{
  const user=firebase.auth().currentUser;
@@ -56,7 +67,7 @@ document.getElementById("sendFirebase").addEventListener("click",async()=>{
  finally{button.disabled=false;}
 });
 firebase.auth().onAuthStateChanged(user=>{
-if(user&&user.uid==="bX1ogVwQfHUy5Qy2r1toKF5z3Hl1"){access.hidden=true;work.hidden=false;clock.value=nowLibreville();render();}
+if(user&&user.uid==="bX1ogVwQfHUy5Qy2r1toKF5z3Hl1"){access.hidden=true;work.hidden=false;clock.value=nowLibreville();render();if(badgeMode)document.getElementById("badgeMessage").textContent="Prêt : confirmer uniquement si la montée a été simulée.";}
 else{work.hidden=true;access.hidden=false;access.innerHTML='<h2>Connexion administrateur</h2><p>Connecte-toi ici, sans changer de page. Le compte parent de Christina ne donne pas accès à ce prototype chauffeur.</p><form id="driverLogin"><label>Adresse e-mail<input id="driverEmail" type="email" autocomplete="username" required></label><label>Mot de passe<input id="driverPassword" type="password" autocomplete="current-password" required></label><button type="submit">Se connecter</button></form><p id="driverError" role="status"></p><a href="./index.html">Retour à TACLAR</a>';document.getElementById("driverLogin").onsubmit=async e=>{e.preventDefault();const email=document.getElementById("driverEmail").value.trim(),password=document.getElementById("driverPassword").value;const notice=document.getElementById("driverError");notice.textContent="Connexion…";try{await firebase.auth().signInWithEmailAndPassword(email,password);document.getElementById("driverPassword")?.removeAttribute("value");}catch(err){notice.textContent="Connexion impossible. Vérifie les identifiants du compte administrateur."}};}
 });
 document.getElementById("confirm").addEventListener("click",()=>{if(current>=4)return;if(!clock.value){alert("Choisis une heure");return;}times.push(clock.value);current++;render()});
