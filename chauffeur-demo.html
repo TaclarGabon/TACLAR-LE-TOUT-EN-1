@@ -17,10 +17,10 @@ label{display:block;font-weight:700;font-size:14px}small{color:#627789}
 <div class="card"><h1>Transport scolaire</h1><p class="sub">Élève test : Gulian Fity · Elite International · 6e PEII</p><div class="notice">DÉMONSTRATION : le badge ouvre cette page. La confirmation Firebase est visible dans le compte parent, sans notification push ni GPS réel.</div></div>
 <div id="access" class="card">Vérification du compte administrateur…</div>
 <section id="work" hidden><div class="card"><h2>Circuit test — Okala → La Sablière</h2><p class="sub">Quatre confirmations dans l'ordre. Un double clic ne valide pas deux fois le même événement.</p>
-<div id="steps"></div><div id="badgeConfirmArea" hidden><p class="notice">Badge de Gulian Fity reconnu — démonstration. Vérifie son identité avant de confirmer.</p><button id="badgeConfirm" type="button">Confirmer la montée de Gulian</button><p id="badgeMessage" role="status"></p></div>
+<div id="steps"></div><p id="syncCount" class="notice" role="status">Consultation des confirmations Firebase…</p><div id="badgeConfirmArea" hidden><p class="notice">Badge de Gulian Fity reconnu — démonstration. Vérifie son identité avant de confirmer.</p><button id="badgeConfirm" type="button">Confirmer la montée de Gulian</button><p id="badgeMessage" role="status"></p></div>
 <label for="clock">Heure simulée à Libreville <input id="clock" type="time"></label>
 <button id="confirm">Simuler la confirmation QR</button><button id="reset" class="secondary">Réinitialiser la démonstration</button><button id="sendFirebase" type="button" class="secondary">Envoyer événement test à Firebase</button><p id="firebaseResult" role="status"></p>
-<p><small>Les confirmations sont conservées uniquement dans cet onglet jusqu'à la réinitialisation ou au rechargement de la page. Aucun enregistrement Firestore.</small></p></div></section>
+<p><small>Les coches ci-dessus correspondent à la simulation locale. Seules les étapes envoyées avec le bouton Firebase apparaissent chez le parent. La simulation locale ne transmet rien.</small></p></div></section>
 </main>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
@@ -60,14 +60,14 @@ document.getElementById("sendFirebase").addEventListener("click",async()=>{
  const found=await col.get();
  const used=new Set(found.docs.map(d=>d.id));
  let step=0;while(step<4&&used.has("step-"+step))step++;
- if(step===4){notice.textContent="Toutes les étapes de test sont déjà enregistrées pour aujourd’hui.";return;}
+ if(step===4){notice.textContent="Les quatre étapes Firebase sont déjà enregistrées pour aujourd’hui.";document.getElementById("syncCount").textContent="Firebase : 4/4 étapes enregistrées.";return;}
  await col.doc("step-"+step).set({studentId:"gulian-fity",step:step,day:day,recordedAt:firebase.firestore.FieldValue.serverTimestamp()});
- notice.textContent="Étape "+(step+1)+" envoyée à Firebase. Vérifie maintenant le compte parent.";
+ notice.textContent="✅ Étape "+(step+1)+"/4 enregistrée dans Firebase : "+labels[step]+". "+(step===3?"Circuit terminé, les quatre étapes sont disponibles pour Christina.":"Clique de nouveau pour enregistrer l’étape suivante.");document.getElementById("syncCount").textContent="Firebase : "+(used.size+1)+"/4 étapes enregistrées.";
  }catch(err){notice.textContent="Envoi impossible. Vérifie les règles Firestore et réessaie."}
  finally{button.disabled=false;}
 });
 firebase.auth().onAuthStateChanged(user=>{
-if(user&&user.uid==="bX1ogVwQfHUy5Qy2r1toKF5z3Hl1"){access.hidden=true;work.hidden=false;clock.value=nowLibreville();render();if(badgeMode)document.getElementById("badgeMessage").textContent="Prêt : confirmer uniquement si la montée a été simulée.";}
+if(user&&user.uid==="bX1ogVwQfHUy5Qy2r1toKF5z3Hl1"){access.hidden=true;work.hidden=false;clock.value=nowLibreville();render();db.collection("transportDemoDays").doc("gulian-fity-"+dateKey()).collection("events").get().then(snap=>{document.getElementById("syncCount").textContent="Firebase : "+snap.size+"/4 étapes enregistrées."}).catch(()=>{document.getElementById("syncCount").textContent="État Firebase indisponible."});if(badgeMode)document.getElementById("badgeMessage").textContent="Prêt : confirmer uniquement si la montée a été simulée.";}
 else{work.hidden=true;access.hidden=false;access.innerHTML='<h2>Connexion administrateur</h2><p>Connecte-toi ici, sans changer de page. Le compte parent de Christina ne donne pas accès à ce prototype chauffeur.</p><form id="driverLogin"><label>Adresse e-mail<input id="driverEmail" type="email" autocomplete="username" required></label><label>Mot de passe<input id="driverPassword" type="password" autocomplete="current-password" required></label><button type="submit">Se connecter</button></form><p id="driverError" role="status"></p><a href="./index.html">Retour à TACLAR</a>';document.getElementById("driverLogin").onsubmit=async e=>{e.preventDefault();const email=document.getElementById("driverEmail").value.trim(),password=document.getElementById("driverPassword").value;const notice=document.getElementById("driverError");notice.textContent="Connexion…";try{await firebase.auth().signInWithEmailAndPassword(email,password);document.getElementById("driverPassword")?.removeAttribute("value");}catch(err){notice.textContent="Connexion impossible. Vérifie les identifiants du compte administrateur."}};}
 });
 document.getElementById("confirm").addEventListener("click",()=>{if(current>=4)return;if(!clock.value){alert("Choisis une heure");return;}times.push(clock.value);current++;render()});
