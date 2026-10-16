@@ -41,7 +41,18 @@ match /registrationRequests/{requestId} {
       "college-capitaine-ntchorere"
     ]
     && request.resource.data.classId is string
-    && request.resource.data.classId.size() <= 80
+    && (
+      (request.resource.data.schoolId == "elite-international"
+        && request.resource.data.classId in ["elite-6e-peii", "other-class"])
+      ||
+      (request.resource.data.schoolId == "college-capitaine-ntchorere"
+        && request.resource.data.classId in [
+          "ntchorere-6e-a", "ntchorere-5e-a", "ntchorere-4e-a",
+          "ntchorere-3e-a", "ntchorere-2nde-a", "ntchorere-2nde-stt",
+          "ntchorere-1ere-aca", "ntchorere-1ere-acc",
+          "ntchorere-tle-acc", "ntchorere-tle-cg", "other-class"
+        ])
+    )
     && request.resource.data.otherClass is string
     && request.resource.data.otherClass.size() <= 60
     && request.resource.data.transportRequested is bool
