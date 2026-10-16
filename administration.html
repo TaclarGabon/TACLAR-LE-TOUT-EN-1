@@ -67,18 +67,29 @@ document.getElementById("registrationBtn").onclick=registrationForm;
 let stopPending=null;
 document.getElementById("closeAdmin").addEventListener("click",()=>{if(stopPending){stopPending();stopPending=null}});
 document.getElementById("pendingBtn").onclick=()=>{
- show("Inscriptions en attente","Connexion aux demandes Firebase…");
  if(stopPending){stopPending();stopPending=null}
+ show("Inscriptions en attente","Connexion aux demandes Firebase…");
  stopPending=db.collection("registrationRequests").limit(100).onSnapshot(snap=>{
   if(document.getElementById("adminDetail").hidden)return;
   const docs=snap.docs.map(d=>({id:d.id,...d.data()}));
   const count=docs.filter(x=>x.status==="pending").length;
-  show("Inscriptions en attente",'<p>Actualisation automatique · '+count+' demande(s) en attente, '+docs.length+' dossier(s) au total.</p>'+(docs.length?docs.map(x=>'<div class="entry"><strong>'+safe(x.parentName||"Responsable non renseigné")+'</strong><p>Enfant : '+safe(x.childName||"—")+'</p><p>École : '+safe(x.schoolId||"—")+' · Classe : '+safe(x.classId||"—")+'</p><p>Statut : '+safe(x.status||"À vérifier")+'</p><p><small>Vérification et validation à activer après publication des règles sécurisées.</small></p></div>').join(""):'<p>Aucune demande reçue.</p>'));
- },()=>show("Inscriptions en attente",'<p>Lecture impossible : les règles Firestore de la collection registrationRequests ne sont pas encore autorisées ou la connexion est indisponible.</p>'));
+  const actions=x=>x.status==="approved"||x.status==="archived"||x.status==="rejected"?"":'<div>'+button("Valider le dossier","registration-status:"+x.id+":approved",x.id)+button("Demander correction","registration-status:"+x.id+":correction_requested",x.id)+button("Refuser","registration-status:"+x.id+":rejected",x.id)+button("Archiver","registration-status:"+x.id+":archived",x.id)+'</div>';
+  const html=docs.map(x=>'<div class="entry"><strong>'+safe(x.parentName||"Responsable non renseigné")+'</strong><p>Enfant : '+safe(x.childName||"—")+'</p><p>E-mail : '+safe(x.email||"—")+'</p><p>Téléphone : '+safe(x.phone||"—")+'</p><p>École : '+safe(x.schoolId||"—")+' · Classe : '+safe(x.classId==="other-class"?x.otherClass+" (à vérifier)":x.classId||"—")+'</p><p>Statut : '+safe(x.status||"À vérifier")+'</p>'+actions(x)+'</div>').join("");
+  show("Inscriptions en attente",'<p>Actualisation automatique · '+count+' en attente, '+docs.length+' dossiers au total.</p><p><small>La validation du dossier ne crée pas encore le rattachement à un élève ni un abonnement.</small></p>'+(docs.length?html:'<p>Aucune demande reçue.</p>'));
+ },()=>show("Inscriptions en attente",'<p>Lecture impossible : autorisations de la collection registrationRequests non publiées ou connexion indisponible.</p>'));
 };
 document.getElementById("items").addEventListener("click",e=>{
 const btn=e.target.closest("button[data-action]");if(!btn)return;
 const {action,id}=btn.dataset;
+if(action.startsWith("registration-status:")){
+ const parts=action.split(":"),status=parts[2],allowed=["approved","correction_requested","rejected","archived"];
+ if(!allowed.includes(status)||parts[1]!==id)return;
+ if(!confirm("Confirmer le nouveau statut « "+status+" » pour cette demande ?"))return;
+ btn.disabled=true;
+ db.collection("registrationRequests").doc(id).update({status,reviewedAt:firebase.firestore.FieldValue.serverTimestamp()})
+ .catch(err=>{alert("Mise à jour refusée : règles Firebase non publiées ou autorisation insuffisante.");btn.disabled=false});
+ return;
+}
 if(action==="school")openSchool(id);
 if(action==="class")openClass(id);
 if(action==="student")openStudent(id);
