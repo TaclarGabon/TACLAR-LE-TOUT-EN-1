@@ -1,0 +1,43 @@
+// TACLAR — bloc à INTÉGRER dans les règles Firestore existantes,
+// À placer dans match /databases/{database}/documents.
+// Ne remplace jamais les autres règles déjà publiées.
+// Ce bloc suppose que les parents ont créé un compte Firebase Auth.
+// Un formulaire ouvert sans authentification ne pourra pas écrire.
+match /registrationRequests/{requestId} {
+  function isAdmin() {
+    return request.auth != null && request.auth.uid == "bX1ogVwQfHUy5Qy2r1toKF5z3Hl1";
+  }
+  function isOwner() {
+    return request.auth != null && request.resource.data.ownerUid == request.auth.uid;
+  }
+  allow create: if isOwner()
+    && request.resource.data.keys().hasOnly([
+      "ownerUid", "parentName", "email", "phone", "childName", "age",
+      "schoolId", "classId", "otherClass", "transportRequested",
+      "pickupArea", "status", "createdAt"
+    ])
+    && request.resource.data.status == "pending"
+    && request.resource.data.parentName is string
+    && request.resource.data.parentName.size() <= 100
+    && request.resource.data.childName is string
+    && request.resource.data.childName.size() <= 100
+    && request.resource.data.email is string
+    && request.resource.data.email.size() <= 180
+    && request.resource.data.phone is string
+    && request.resource.data.phone.size() <= 30
+    && request.resource.data.age is string
+    && request.resource.data.schoolId is string
+    && request.resource.data.schoolId in ["elite-international", "college-capitaine-ntchorere"]
+    && request.resource.data.classId is string
+    && request.resource.data.otherClass is string
+    && request.resource.data.otherClass.size() <= 60
+    && request.resource.data.transportRequested is bool
+    && request.resource.data.pickupArea is string
+    && request.resource.data.pickupArea.size() <= 130
+    && request.resource.data.createdAt == request.time;
+  allow get, list: if isAdmin();
+  allow update, delete: if false;
+}
+// TODO avant déploiement : vérifier l'identité/ownership du parent, limiter
+// le nombre de demandes par compte côté serveur, anti-abus et validation
+// effective école/classe côté serveur. Ne pas activer en production en l'état.
