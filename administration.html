@@ -64,13 +64,17 @@ function registrationForm(){
  };
 }
 document.getElementById("registrationBtn").onclick=registrationForm;
-document.getElementById("pendingBtn").onclick=async()=>{
- show("Inscriptions en attente","Lecture des demandes depuis Firebase…");
- try{
-  const snap=await db.collection("registrationRequests").limit(100).get();
+let stopPending=null;
+document.getElementById("closeAdmin").addEventListener("click",()=>{if(stopPending){stopPending();stopPending=null}});
+document.getElementById("pendingBtn").onclick=()=>{
+ show("Inscriptions en attente","Connexion aux demandes Firebase…");
+ if(stopPending){stopPending();stopPending=null}
+ stopPending=db.collection("registrationRequests").limit(100).onSnapshot(snap=>{
+  if(document.getElementById("adminDetail").hidden)return;
   const docs=snap.docs.map(d=>({id:d.id,...d.data()}));
-  show("Inscriptions en attente",'<p>Demandes enregistrées : '+docs.length+'. Consultation réservée à la Direction. La validation des comptes n’est pas encore activée.</p>'+(docs.length?docs.map(x=>'<div class="entry"><strong>'+safe(x.parentName||"Responsable non renseigné")+'</strong><p>Enfant : '+safe(x.childName||"—")+'</p><p>École : '+safe(x.schoolId||"—")+' · Classe : '+safe(x.classId||"—")+'</p><p>Statut : '+safe(x.status||"À vérifier")+'</p></div>').join(""):'<p>Aucune demande reçue pour le moment.</p>'));
- }catch(e){show("Inscriptions en attente",'<p>Ce module n’a pas encore accès aux demandes Firestore. Il faut créer la collection et définir des règles de lecture réservées à l’administration avant de recevoir des inscriptions publiques.</p>')}
+  const count=docs.filter(x=>x.status==="pending").length;
+  show("Inscriptions en attente",'<p>Actualisation automatique · '+count+' demande(s) en attente, '+docs.length+' dossier(s) au total.</p>'+(docs.length?docs.map(x=>'<div class="entry"><strong>'+safe(x.parentName||"Responsable non renseigné")+'</strong><p>Enfant : '+safe(x.childName||"—")+'</p><p>École : '+safe(x.schoolId||"—")+' · Classe : '+safe(x.classId||"—")+'</p><p>Statut : '+safe(x.status||"À vérifier")+'</p><p><small>Vérification et validation à activer après publication des règles sécurisées.</small></p></div>').join(""):'<p>Aucune demande reçue.</p>'));
+ },()=>show("Inscriptions en attente",'<p>Lecture impossible : les règles Firestore de la collection registrationRequests ne sont pas encore autorisées ou la connexion est indisponible.</p>'));
 };
 document.getElementById("items").addEventListener("click",e=>{
 const btn=e.target.closest("button[data-action]");if(!btn)return;
