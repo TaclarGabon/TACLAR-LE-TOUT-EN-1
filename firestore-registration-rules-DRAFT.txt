@@ -2,8 +2,7 @@
 // Coller DANS match /databases/{database}/documents,
 // avant match /{document=**}. Conserver toutes les règles existantes.
 // Nécessite le function isAdmin() déjà défini dans les règles TACLAR.
-// IMPORTANT : ne pas publier avant mise à jour du parcours de compte
-// et test avec un compte de démonstration distinct.
+// Publication uniquement après contrôle syntaxique et tests de permissions dans Firebase ; commencer avec un compte de démonstration distinct.
 
 match /registrationRequests/{requestId} {
   function isVerifiedOwner() {
@@ -15,6 +14,7 @@ match /registrationRequests/{requestId} {
   // Un dossier maximum par compte Firebase Auth (UID document).
   // Une nouvelle tentative ne crée donc pas de doublon du même compte.
   allow create: if isVerifiedOwner()
+    && request.resource.data.keys().hasAll(["ownerUid","parentName","email","phone","childName","age","schoolId","classId","otherClass","transportRequested","pickupArea","status","createdAt"])
     && request.resource.data.keys().hasOnly([
       "ownerUid", "parentName", "email", "phone",
       "childName", "age", "schoolId", "classId",
@@ -35,7 +35,7 @@ match /registrationRequests/{requestId} {
     && request.resource.data.phone.size() >= 8
     && request.resource.data.phone.size() <= 30
     && request.resource.data.age is string
-    && request.resource.data.age.size() <= 3
+    && request.resource.data.age in ["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26+"]
     && request.resource.data.schoolId in [
       "elite-international",
       "college-capitaine-ntchorere"
@@ -55,6 +55,7 @@ match /registrationRequests/{requestId} {
     )
     && request.resource.data.otherClass is string
     && request.resource.data.otherClass.size() <= 60
+    && ((request.resource.data.classId == "other-class" && request.resource.data.otherClass.size() >= 2) || (request.resource.data.classId != "other-class" && request.resource.data.otherClass == ""))
     && request.resource.data.transportRequested is bool
     && request.resource.data.pickupArea is string
     && request.resource.data.pickupArea.size() <= 130;
